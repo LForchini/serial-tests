@@ -55,7 +55,7 @@ impl SplitSerialStream {
         loop {
             tokio::select! {
                 Some(data) = self.in_rx.recv() => {
-                    self.inner.write(&data).await?;
+                    self.inner.write_all(&data).await?;
                 }
                 Ok(bytes) = self.inner.read(&mut buf) => {
                     let buf = &buf[..bytes];
