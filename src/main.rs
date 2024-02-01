@@ -16,35 +16,39 @@ async fn main() -> anyhow::Result<()> {
 
     let port_name = &env::args().collect::<Vec<_>>()[1];
 
-    let (tx, mut rx) = tokio_serial::new(port_name, 9600)
-        //.parity(tokio_serial::Parity::Odd)
+    let (tx, mut rx, k, jh0) = tokio_serial::new(port_name, 9600)
         .open_native_async()
         .unwrap()
         .split();
 
-    let jh1 = tokio::spawn(async move {
+    let _jh1 = tokio::spawn(async move {
         let stdin = stdin();
+
         let mut lines = BufReader::new(stdin).lines();
 
-        while let Ok(Some(line)) = lines.next_line().await {
-            tx.send(line.as_bytes().into()).await.unwrap();
-        }
-    });
-
-    let jh2 = tokio::spawn(async move {
-        while let Some(line) = rx.recv().await {
-            if let Ok(line) = std::str::from_utf8(&line) {
-                println!("{}", line);
+        loop {
+            if let Ok(Some(line)) = lines.next_line().await {
+                tx.send((line + "\n").as_bytes().into()).await.unwrap();
             } else {
-                eprintln!("got malformed packet");
+                k.send(()).unwrap();
+                break;
             }
         }
     });
 
-    tokio::select!(
-        _ = jh1 => {}
-        _ = jh2 => {}
-    );
+    tokio::spawn(async move {
+        loop {
+            if let Some(line) = rx.recv().await {
+                if let Ok(line) = std::str::from_utf8(&line) {
+                    print!("{}", line);
+                } else {
+                    eprintln!("got malformed packet");
+                }
+            }
+        }
+    });
+
+    jh0.await??;
 
     Ok(())
 }
