@@ -16,7 +16,8 @@ async fn main() -> anyhow::Result<()> {
 
     let port_name = &env::args().collect::<Vec<_>>()[1];
 
-    let (tx, mut rx) = tokio_serial::new(port_name, 19_200)
+    let (tx, mut rx) = tokio_serial::new(port_name, 9600)
+        //.parity(tokio_serial::Parity::Odd)
         .open_native_async()
         .unwrap()
         .split();
@@ -32,7 +33,11 @@ async fn main() -> anyhow::Result<()> {
 
     let jh2 = tokio::spawn(async move {
         while let Some(line) = rx.recv().await {
-            println!("{:?}", std::str::from_utf8(&line));
+            if let Ok(line) = std::str::from_utf8(&line) {
+                println!("{}", line);
+            } else {
+                eprintln!("got malformed packet");
+            }
         }
     });
 
