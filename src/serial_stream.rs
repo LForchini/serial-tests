@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use tokio::{
     io::AsyncReadExt,
     io::AsyncWriteExt,
@@ -29,8 +31,8 @@ impl SerialStreamExt for SerialStream {
         oneshot::Sender<()>,
         JoinHandle<Result<(), SplitSerialStreamError<Box<[u8]>>>>,
     ) {
-        let (in_tx, in_rx) = channel(10);
-        let (out_tx, out_rx) = channel(10);
+        let (in_tx, in_rx) = channel(1024);
+        let (out_tx, out_rx) = channel(1024);
         let (kill_tx, kill_rx) = oneshot::channel();
 
         let mut sss = SplitSerialStream {
@@ -102,8 +104,11 @@ impl SplitSerialStream {
         }
 
         while let Ok(data) = self.in_rx.try_recv() {
+            println!("{:?}", data);
             self.inner.write_all(&data).await?;
         }
+
+        // there needs to be some delay here...
 
         Ok(())
     }
